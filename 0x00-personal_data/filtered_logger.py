@@ -2,8 +2,12 @@
 """Module defines filter_datum function"""
 
 import re
-from typing import List
+from typing import List, Tuple
+import os
 import logging
+import mysql.connector
+
+PII_FIELDS = ('name', 'email', 'phone', 'password', 'ssn')
 
 
 def filter_datum(fields: List[str], redaction: str,
