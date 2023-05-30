@@ -36,7 +36,7 @@ def status_unauth() -> str:
 
 
 @app_views.route('/forbidden/', methods=['GET'], strict_slashes=False)
-def status_unauth() -> str:
+def status_forbid() -> str:
     """ GET /api/v1/forbidden
     Return:
       - the auth status of the API
