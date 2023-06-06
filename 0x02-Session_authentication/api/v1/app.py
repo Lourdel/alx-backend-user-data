@@ -14,7 +14,7 @@ CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
 auth = None
 
 excluded_paths = ['/api/v1/status/', '/api/v1/unauthorized/',
-                  '/api/v1/forbidden/']
+                  '/api/v1/forbidden/', '/api/v1/auth_session/login/']
 
 authentic = getenv("AUTH_TYPE")
 
@@ -37,7 +37,7 @@ def filter():
         return
     if auth.require_auth(request.path, excluded_paths) is False:
         pass
-    elif auth.authorization_header(request) is None:
+    elif auth.authorization_header(request) and auth.session_cookie is None:
         abort(401)
     else:
         request.current_user = auth.current_user(request)
