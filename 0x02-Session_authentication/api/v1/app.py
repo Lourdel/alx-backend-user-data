@@ -6,58 +6,33 @@ from os import getenv
 from api.v1.views import app_views
 from flask import Flask, jsonify, abort, request
 from flask_cors import (CORS, cross_origin)
-import os
+from api.v1.auth.auth import Auth
+from api.v1.auth.basic_auth import BasicAuth
+from api.v1.auth.session_auth import SessionAuth
+"""
+from api.v1.auth.session_exp_auth import SessionExpAuth
+from api.v1.auth.session_db_auth import SessionDBAuth
+"""
 
 app = Flask(__name__)
 app.register_blueprint(app_views)
 CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
 auth = None
 
-excluded_paths = ['/api/v1/status/', '/api/v1/unauthorized/',
-                  '/api/v1/forbidden/', '/api/v1/auth_session/login/']
+auth_t = getenv('AUTH_TYPE', auth)
 
-authentic = getenv("AUTH_TYPE")
-
-if authentic:
-    if authentic == "session_auth":
-        from api.v1.auth.session_auth import SessionAuth
-        auth = SessionAuth()
-    if authentic == "basic_auth":
-        from api.v1.auth.basic_auth import BasicAuth
-        auth = BasicAuth()
-    else:
-        from api.v1.auth.auth import Auth
-        auth = Auth()
-
-
-@app.before_request
-def filter():
-    """filters requests"""
-    if auth is None:
-        return
-    if auth.require_auth(request.path, excluded_paths) is False:
-        pass
-    elif auth.authorization_header(request) and auth.session_cookie is None:
-        abort(401)
-    else:
-        request.current_user = auth.current_user(request)
-        if request.current_user is None:
-            abort(403)
-
-
-def authenticate_user():
-    """Authenticates a user before processing a request.
-    """
-    if auth:
-        if auth.require_auth(request.path, excluded_paths):
-            user = auth.current_user(request)
-            if auth.authorization_header(request) is None and \
-                    auth.session_cookie(request) is None:
-                abort(401)
-            if user is None:
-                abort(403)
-            request.current_user = user
-
+if auth_t == 'auth':
+    auth = Auth()
+if auth_t == 'basic_auth':
+    auth = BasicAuth()
+if auth_t == 'session_auth':
+    auth = SessionAuth()
+"""
+if auth_t == 'session_exp_auth':
+    auth = SessionExpAuth()
+if auth_t == 'session_db_auth':
+    auth = SessionDBAuth()
+"""
 
 @app.errorhandler(404)
 def not_found(error) -> str:
@@ -67,17 +42,35 @@ def not_found(error) -> str:
 
 
 @app.errorhandler(401)
-def unauthorized(error) -> str:
-    """ unauthorized handler
-    """
+def req_unauthorised(e) -> str:
+    """Unauthorised Client Handler"""
     return jsonify({"error": "Unauthorized"}), 401
 
 
 @app.errorhandler(403)
-def forbidden(error) -> str:
-    """ forbidden handler
-    """
+def req_forbidden(e) -> str:
+    """forbidden page for authenticated user"""
     return jsonify({"error": "Forbidden"}), 403
+
+
+@app.before_request
+def req_filter():
+    """Filters requests before processing requests"""
+    if auth:
+        req_path = request.path
+        exclusion_path = ['/api/v1/status/',
+                          '/api/v1/unauthorized/',
+                          '/api/v1/forbidden/',
+                          '/api/v1/auth_session/login/']
+        state_path = auth.require_auth(req_path, exclusion_path)
+        if state_path:
+            user = auth.current_user(request)
+            if auth.authorization_header(request) is None \
+                    and auth.session_cookie(request) is None:
+                abort(401)
+            if user is None:
+                abort(403)
+            request.current_user = user
 
 
 if __name__ == "__main__":
