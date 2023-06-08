@@ -35,17 +35,23 @@ class DB:
 
     def add_user(self, email: str, hashed_password: str) -> User:
         """Method adds a user to a database"""
-        new_user = User(email=email, hashed_password=hashed_password)
-        self._session.add(new_user)
-        self._session.commit()
+        try:
+            new_user = User(email=email, hashed_password=hashed_password)
+            self._session.add(new_user)
+            self._session.commit()
+        except Exception:
+            self._session.rollback()
+            new_user = None
         return new_user
 
     def find_user_by(self, **kwargs) -> User:
         """Method returns the first row found in the users table"""
-        try:
-            user = self._session.query(User).filter_by(**kwargs).first()
-            if user is None:
-                raise NoResultFound
-            return user
-        except InvalidRequestError as e:
-            raise InvalidRequestError
+        for k, v in kwargs.items():
+            if hasattr(User, k):
+                continue
+            else:
+                raise InvalidRequestError()
+        user = self._session.query(User).filter_by(**kwargs).first()
+        if user is None:
+            raise NoResultFound
+        return user
