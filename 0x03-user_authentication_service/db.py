@@ -5,11 +5,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
-
-from user import Base
-from user import User
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
+
+from user import Base, User
 
 
 class DB:
@@ -46,12 +45,12 @@ class DB:
 
     def find_user_by(self, **kwargs) -> User:
         """Method returns the first row found in the users table"""
-        for k, v in kwargs.items():
-            if hasattr(User, k):
+        for key, value in kwargs.items():
+            if hasattr(User, key):
                 continue
             else:
                 raise InvalidRequestError()
-        user = self._session.query(User).filter_by(**kwargs).first()
-        if user is None:
+        res = self._session.query(User).filter_by(**kwargs).first()
+        if res is None:
             raise NoResultFound
-        return user
+        return res
