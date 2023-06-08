@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""DB module
-"""
+"""DB Module"""
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 
 from user import Base, User
 
@@ -18,7 +18,7 @@ class DB:
     def __init__(self) -> None:
         """Initialize a new DB instance
         """
-        self._engine = create_engine("sqlite:///a.db", echo=True)
+        self._engine = create_engine("sqlite:///a.db", echo=False)
         Base.metadata.drop_all(self._engine)
         Base.metadata.create_all(self._engine)
         self.__session = None
@@ -43,8 +43,9 @@ class DB:
             new_user = None
         return new_user
 
-    def find_user_by(self, **kwargs) -> User:
-        """Method returns the first row found in the users table"""
+    def find_user_by(self, **kwargs: dict) -> User:
+        """method takes in arbitrary keyword arguments
+        and returns the 1st row found in the user tables"""
         for key, value in kwargs.items():
             if hasattr(User, key):
                 continue
@@ -52,5 +53,18 @@ class DB:
                 raise InvalidRequestError()
         res = self._session.query(User).filter_by(**kwargs).first()
         if res is None:
-            raise NoResultFound
+            raise NoResultFound()
         return res
+
+    def update_user(self, user_id: int, **kwargs) -> None:
+        """Updates selected instance in DB with new
+        attributes"""
+        res = self.find_user_by(id=user_id)
+        if res:
+            for key, value in kwargs.items():
+                if hasattr(User, key):
+                    setattr(res, key, value)
+                else:
+                    raise ValueError
+            self._session.commit()
+        return None
